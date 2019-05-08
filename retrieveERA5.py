@@ -11,7 +11,7 @@ import cdsapi
 
 ### Configuration for Download
 year_start = 1979
-year_end = 2018
+year_end = 2000
 SAVE_DIR = '/Users/martinschneider/Documents/Studium_Meteorologie/Master/4.Semester/Klimamodellierung/Projektarbeit/ERA5/'
 ERA5_dataset = 'reanalysis-era5-single-levels'
 param = ['mean_sea_level_pressure']
@@ -31,7 +31,7 @@ def retrieveERAinterim(datelist):
         "class": "ei",
         "format": "netcdf",
         "dataset": "interim",
-        # datelist format: "YYYYMMDD/YYYYMMDD" 
+        # datelist format: "YYYYMMDD/YYYYMMDD"
         # e.g. 19940101/19940201/19940301/19940401/19940501/"
         "date": datelist,
         "expver": "1",
@@ -89,7 +89,7 @@ def retrieveERA5(year_start,year_end,ERA5_dataset,param,p_level,SAVE_DIR):
 def createDatelistStr(start,end):
     # start, end format:
     # 'YYYY-mm-dd' e.g. '2014-01-01'
-    datelist = pd.date_range(start,end, 
+    datelist = pd.date_range(start,end,
               freq='MS').strftime("%Y%m%d").tolist()
     str1 = '/'.join(datelist)
     return datelist
@@ -102,5 +102,3 @@ def createDatelistStr(start,end):
 
 ### Retireve ERA5 data
 retrieveERA5(year_start,year_end,ERA5_dataset,param,p_level,SAVE_DIR)
-
-
