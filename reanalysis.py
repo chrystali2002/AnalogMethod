@@ -1,22 +1,60 @@
 import xarray as xr
+import numpy as np
 import dask
+
+"""
+reanalysis.py creates class from era5 netcdf datasets imported with xarray
+
+Input:
+------
+    - xarray dataset
+
+Output:
+-------
+    - python class whitch can:
+
+        + calculate DAILY MEAN ( if you only have hourly data)
+
+        + calculate CLIMATOLOGY with a 21 day window (+- 10 days from actual day)
+
+        + calculate NORMALIZED ANOMALIES
+
+path with data FOR TESTING:
+GCM_data('/Users/kristoferhasel/Desktop/UNI/MASTER/Klimamodelle/UE/AnalogMethod/')
+
+"""
 
 class GCM_data:
     def __init__(self, datapath):
         self.datapath = datapath
-    
-    def create_xarray(self):
-        self.ds = xr.open_mfdataset(self.datapath+'*.nc', chunks={'time': 504, 
+        self.ds = xr.open_mfdataset(self.datapath+'*.nc', chunks={'time': 504,
                                                                   'latitude': 141, 'longitude': 141})
-        return self.ds
-    
-    def convert_to_dailymean(self):
-        self.ds = self.create_xarray()
-        self.daily_mean = self.ds['r'].resample(time='1D').mean(axis=0).chunk({'time': 42, 
+        self.vars = list(self.ds.data_vars)
+        for i in self.vars:
+            self.ds[i]
+
+    def to_dailymean(self):
+        self.dmean = {}
+        for i, val in enumerate(self.vars):
+            self.dmean[val] = self.ds[val].resample(time='1D').mean(axis=0).chunk({'time': 508,
                                                                           'longitude': 141, 'latitude':141})
-        return self.daily_mean
-    
-    def climatology(self):
-        self.r_daily = self.convert_to_dailymean()
-        self.r_clim = self.r_daily.rolling(time=21, center=True).mean().groupby('time.day').mean(axis=0)
-        return self.r_clim
+        return self.dmean
+
+    def clim(self):
+        self.dmean = self.to_dailymean()
+        self.clim = {}
+        self.ss = {}
+        for i, val in enumerate(self.vars):
+            self.clim[val] = self.dmean[val].rolling(time=21, center=True).mean().dropna('time').groupby('time.dayofyear').mean(axis=0)
+            ss_tmp = self.dmean[val].rolling(time=21, center=True).std().dropna('time')
+            self.ss[val] = ss_tmp.std(dim={'longitude','latitude'}).groupby('time.dayofyear').std(axis=0)
+        return self.clim, self.ss
+
+    def ano(self):
+        self.dmean = self.to_dailymean()
+        self.clim, self.ss = self.clim()
+        self.ano = {}
+        for i, val in enumerate(self.vars):
+            ano_tmp = self.dmean[val].rolling(time=21, center=True).mean().dropna('time').groupby('time.dayofyear') - self.clim[val]
+            self.ano[val] = ano_tmp.groupby('time.dayofyear') / self.ss[val]
+        return self.ano
