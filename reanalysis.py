@@ -11,7 +11,7 @@ Input:
 
 Output:
 -------
-    - python class whitch can:
+    - python class which can:
 
         + calculate DAILY MEAN ( if you only have hourly data)
 
