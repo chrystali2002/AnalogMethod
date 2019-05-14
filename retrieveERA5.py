@@ -11,7 +11,7 @@ import cdsapi
 
 ### Configuration for Download
 year_start = 1979
-year_end = 2000
+year_end = 2019
 SAVE_DIR = '/Users/martinschneider/Documents/Studium_Meteorologie/Master/4.Semester/Klimamodellierung/Projektarbeit/ERA5/'
 ERA5_dataset = 'reanalysis-era5-single-levels'
 param = ['mean_sea_level_pressure']
@@ -46,7 +46,7 @@ def retrieveERAinterim(datelist):
 
 def retrieveERA5(year_start,year_end,ERA5_dataset,param,p_level,SAVE_DIR):
     for year in range(year_start, year_end):
-        for mon in range(1,12):
+        for mon in range(1,13):
             if mon < 10:
                 month = '0'+str(mon)
             else:

@@ -41,9 +41,9 @@ class GCM_data:
         return self.dmean
 
     def climatology(self):
-        try
+        try:
             self.dmean
-        except NameError:
+        except AttributeError:
             self.dmean = self.to_dailymean()
         self.clim = {}
         self.ss = {}
@@ -56,7 +56,7 @@ class GCM_data:
     def anomaly(self):
         try:
             self.clim
-        except NameError:
+        except AttributeError:
             self.clim, self.ss = self.climatology()
         self.ano = {}
         for i, val in enumerate(self.vars):
