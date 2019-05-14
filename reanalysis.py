@@ -40,8 +40,11 @@ class GCM_data:
                                                                           'longitude': 141, 'latitude':141})
         return self.dmean
 
-    def clim(self):
-        self.dmean = self.to_dailymean()
+    def climatology(self):
+        try
+            self.dmean
+        except NameError:
+            self.dmean = self.to_dailymean()
         self.clim = {}
         self.ss = {}
         for i, val in enumerate(self.vars):
@@ -50,9 +53,11 @@ class GCM_data:
             self.ss[val] = ss_tmp.std(dim={'longitude','latitude'}).groupby('time.dayofyear').std(axis=0)
         return self.clim, self.ss
 
-    def ano(self):
-        self.dmean = self.to_dailymean()
-        self.clim, self.ss = self.clim()
+    def anomaly(self):
+        try:
+            self.clim
+        except NameError:
+            self.clim, self.ss = self.climatology()
         self.ano = {}
         for i, val in enumerate(self.vars):
             ano_tmp = self.dmean[val].rolling(time=21, center=True).mean().dropna('time').groupby('time.dayofyear') - self.clim[val]
