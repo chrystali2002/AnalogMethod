@@ -49,8 +49,9 @@ class GCM_data:
         self.ss = {}
         for i, val in enumerate(self.vars):
             self.clim[val] = self.dmean[val].rolling(time=21, center=True).mean().dropna('time').groupby('time.dayofyear').mean(axis=0)
-            ss_tmp = self.dmean[val].rolling(time=21, center=True).std().dropna('time')
-            self.ss[val] = ss_tmp.std(dim={'longitude','latitude'}).groupby('time.dayofyear').std(axis=0)
+            ss_rolling = self.dmean[val].rolling(time=21, center=True).construct('window_dim')
+            ss_stacked = ss_rolling.stack(line=('latitude','longitude'))
+            self.ss[val] = ss_stacked.groupby('time.dayofyear').std()
         return self.clim, self.ss
 
     def anomaly(self):
