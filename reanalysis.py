@@ -15,11 +15,12 @@ Output:
 
         + calculate DAILY MEAN ( if you only have hourly data)
 
-        + calculate CLIMATOLOGY with a 21 day window (+- 10 days from actual day)
+        + calculate daily CLIMATOLOGY with a 21 day window (+- 10 days from actual day)
 
-        + calculate NORMALIZED ANOMALIES
+        + calculate daily NORMALIZED ANOMALIES
 
 path with data FOR TESTING:
+from reanalysis import GCM_data
 GCM_data('/Users/kristoferhasel/Desktop/UNI/MASTER/Klimamodelle/UE/AnalogMethod/')
 
 """
@@ -27,17 +28,14 @@ GCM_data('/Users/kristoferhasel/Desktop/UNI/MASTER/Klimamodelle/UE/AnalogMethod/
 class GCM_data:
     def __init__(self, datapath):
         self.datapath = datapath
-        self.ds = xr.open_mfdataset(self.datapath+'*.nc', chunks={'time': 504,
-                                                                  'latitude': 141, 'longitude': 141})
+        self.ds = xr.open_mfdataset(self.datapath+'*.nc',
+                    chunks={'time': 504,'latitude': 141, 'longitude': 141})
         self.vars = list(self.ds.data_vars)
-        for i in self.vars:
-            self.ds[i]
 
     def to_dailymean(self):
-        self.dmean = {}
-        for i, val in enumerate(self.vars):
-            self.dmean[val] = self.ds[val].resample(time='1D').mean(axis=0).chunk({'time': 508,
-                                                                          'longitude': 141, 'latitude':141})
+        # calculates daily mean and creates bigger chunksize for rolling window in the steps ahead
+        self.dmean = self.ds.resample(time='1D').mean().chunk(
+                        {'time': 508,'longitude': 141, 'latitude':141})
         return self.dmean
 
     def climatology(self):
@@ -45,13 +43,14 @@ class GCM_data:
             self.dmean
         except AttributeError:
             self.dmean = self.to_dailymean()
-        self.clim = {}
-        self.ss = {}
-        for i, val in enumerate(self.vars):
-            self.clim[val] = self.dmean[val].rolling(time=21, center=True).mean().dropna('time').groupby('time.dayofyear').mean(axis=0)
-            ss_rolling = self.dmean[val].rolling(time=21, center=True).construct('window_dim')
-            ss_stacked = ss_rolling.stack(line=('latitude','longitude'))
-            self.ss[val] = ss_stacked.groupby('time.dayofyear').std()
+
+        # calculates the climatology and it's standard derivation for further anomaly calculation
+        # climatology is calculated for dayofyear of Target Day ±10days (pool)
+        # standard derivation is calculated for dayof year of the pool
+        self.clim = self.dmean.rolling(time=21, center=True).mean().dropna('time').groupby('time.dayofyear').mean(axis=0) # calculates daily clim for TD + pool
+        ss_rolling = self.dmean.rolling(time=21, center=True).construct('window_dim') # creates the rolling window as a new dimension
+        ss_stacked = ss_rolling.stack(line=('latitude','longitude')) # stacks lat, lon to a 1D DataArray
+        self.ss = ss_stacked.groupby('time.dayofyear').std() # Calculates the std for dayofyear of TD + pool, shape(365,)
         return self.clim, self.ss
 
     def anomaly(self):
@@ -59,8 +58,8 @@ class GCM_data:
             self.clim
         except AttributeError:
             self.clim, self.ss = self.climatology()
-        self.ano = {}
-        for i, val in enumerate(self.vars):
-            ano_tmp = self.dmean[val].rolling(time=21, center=True).mean().dropna('time').groupby('time.dayofyear') - self.clim[val]
-            self.ano[val] = ano_tmp.groupby('time.dayofyear') / self.ss[val]
+
+        # calculates daily normalized anomalies from TD + pool
+        ano_tmp = self.dmean.rolling(time=21, center=True).mean().dropna('time').groupby('time.dayofyear') - self.clim
+        self.ano = ano_tmp.groupby('time.dayofyear') / self.ss
         return self.ano
