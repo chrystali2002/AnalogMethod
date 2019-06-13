@@ -32,11 +32,15 @@ class GCM_data:
                     chunks={'time': 504,'latitude': 141, 'longitude': 141})
         self.vars = list(self.ds.data_vars)
 
+
     def to_dailymean(self):
+        print('Start: Calculating daily mean')
         # calculates daily mean and creates bigger chunksize for rolling window in the steps ahead
         self.dmean = self.ds.resample(time='1D').mean().chunk(
                         {'time': 508,'longitude': 141, 'latitude':141})
+        print('Finished: Calculating daily mean')
         return self.dmean
+
 
     def climatology(self):
         try:
@@ -47,19 +51,31 @@ class GCM_data:
         # calculates the climatology and it's standard derivation for further anomaly calculation
         # climatology is calculated for dayofyear of Target Day ±10days (pool)
         # standard derivation is calculated for dayof year of the pool
-        self.clim = self.dmean.rolling(time=21, center=True).mean().dropna('time').groupby('time.dayofyear').mean(axis=0) # calculates daily clim for TD + pool
-        ss_rolling = self.dmean.rolling(time=21, center=True).construct('window_dim') # creates the rolling window as a new dimension
-        ss_stacked = ss_rolling.stack(line=('latitude','longitude')) # stacks lat, lon to a 1D DataArray
-        self.ss = ss_stacked.groupby('time.dayofyear').std() # Calculates the std for dayofyear of TD + pool, shape(365,)
+
+        print('Start: Calculating climatology')
+        # Construct window dimension (centered).
+        dmean_roll = self.dmean.rolling(time=21, center=True).construct('window_dim')       
+        # Calculate climatology for each day of year (doy), based on time window.
+        self.clim = dmean_roll.groupby('time.dayofyear').mean(dim=['window_dim','time'])       
+        # Calculate standard deviation for each day of year (doy) for all dimensions.
+        self.ss = dmean_roll.groupby('time.dayofyear').std(dim=xr.ALL_DIMS)
+        
+        print('Finished: Calculating climatology')
         return self.clim, self.ss
+
 
     def anomaly(self):
         try:
             self.clim
         except AttributeError:
             self.clim, self.ss = self.climatology()
-
+            
+        print('Start: Calculating anomalies')
         # calculates daily normalized anomalies from TD + pool
-        ano_tmp = self.dmean.rolling(time=21, center=True).mean().dropna('time').groupby('time.dayofyear') - self.clim
-        self.ano = ano_tmp.groupby('time.dayofyear') / self.ss
+        self.ano = self.dmean.groupby('time.dayofyear') - self.clim
+        self.ano = self.dmean.groupby('time.dayofyear') / self.ss
+        
+        self.ano = self.ano.chunk({'time': -1})
+        
+        print('Finished: Calculating anomalies')
         return self.ano
