@@ -29,16 +29,17 @@ for _,ds in ano_roll.groupby('time.dayofyear'):
         ds = ds.rename({'time':'time_old'})
         ds = ds.stack(time=['time_old', 'window_dim']).transpose('time','latitude','longitude')
 #        ds = ds.assign_coords(time=ds.time_old)
-#        ds = ds.drop('dayofyear')
-        print(ds.r.time)
+        ds.coords['time'].attrs['axis'] = 'T'
+
         # Convert DataArrays of individual variables to iris cubes
         # (required for multivariate EOF)        
         ds_iris_r = ds.r.to_iris()
         ds_iris_q = ds.q.to_iris()
         cube_list = iris.cube.CubeList([ds_iris_r, ds_iris_q])
         ds_iris = cube_list.merge()
-#        for coord in ds_iris_r.coords():
-#            print(coord.name())
+#        print(ds_iris_r)
+        for coord in ds_iris_r.dim_coords:
+            print(coord.name())
 #        print(ds_iris_r)
         
         # Calculate multivariate EOF
