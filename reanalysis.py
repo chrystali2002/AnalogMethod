@@ -28,8 +28,8 @@ GCM_data('/Users/kristoferhasel/Desktop/UNI/MASTER/Klimamodelle/UE/AnalogMethod/
 class GCM_data:
     def __init__(self, datapath):
         self.datapath = datapath
-        self.ds = xr.open_mfdataset(self.datapath+'*.nc',
-                    chunks={'time': 504,'latitude': 141, 'longitude': 141})
+        self.ds = xr.open_mfdataset(self.datapath+'*.nc', 
+                        chunks={'time': 504,'latitude': 141, 'longitude': 141})
         self.vars = list(self.ds.data_vars)
 
 
