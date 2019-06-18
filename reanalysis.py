@@ -73,9 +73,9 @@ class GCM_data:
         print('Start: Calculating anomalies')
         # calculates daily normalized anomalies from TD + pool
         self.ano = self.dmean.groupby('time.dayofyear') - self.clim
-        self.ano = self.dmean.groupby('time.dayofyear') / self.ss
+        self.ano = self.ano.groupby('time.dayofyear') / self.ss
         
-        self.ano = self.ano.chunk({'time': -1})
+        self.ano = self.ano.chunk({'time': 5000})
         
         print('Finished: Calculating anomalies')
         return self.ano
