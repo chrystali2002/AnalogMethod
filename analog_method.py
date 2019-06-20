@@ -49,8 +49,8 @@ no_years = len(data_ano.groupby('time.year'))
 # Third column = 2nd analogon. etc.
 analoga = np.zeros((len(data_ano.time), no_analoga+1), dtype='datetime64[s]')
 analoga[:,0] = data_ano.time
-#%%
 
+#%%
 # Run time of script is observed with t_start and t_end respectively.
 t_start = time.time()
 
