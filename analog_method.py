@@ -126,7 +126,7 @@ for i, day in enumerate(timeseries):
         norm = norm.sel(time = ~norm.time.dt.year.isin(da_pseudo_pc.time.to_series()[y].year))
         str_curr_day = da_pseudo_pc.time.to_series().dt.strftime('%Y-%m-%d')[y]
 
-        print('Looking for analoga for: ', str_curr_day)
+        #print('Looking for analoga for: ', str_curr_day)
         for a in range(1,no_analoga+1):
             # Find analogon (day in dataset) through localization of minimum norm.
             minimum_idx = np.argmin(norm).values
@@ -136,19 +136,20 @@ for i, day in enumerate(timeseries):
             
             # Add analogon to analogon array
             # row... select row of current day in analoga array.
-            row = i + y*no_years
+            row = np.where(analoga[:] == datetime.datetime.strptime(str_curr_day, '%Y-%m-%d'))[0][-1]
             analoga[row][a] = analogon
             
             # Set minimum value to nan in norm array to find 2nd, 3rd, ... minimum.
             norm = norm.where(norm.values != norm[minimum_idx].values)
     
-            print(str(a) +  '.analogon: ', str(analogon)[:10])
-    
-    t_end_tmp = time.time()
-    print("total time: ", str(datetime.timedelta(seconds=t_end_tmp - t_start)), '\n')
+            #print(str(a) +  '.analogon: ', str(analogon)[:10])
 
+    t_end_tmp = time.time()
+    print("total time after " + str(day)[5:10] + ": ", str(datetime.timedelta(seconds=t_end_tmp - t_start)), '\n')
+    
 # Save analogon list as pickle file.
 print('Analoga : \n', analoga)
-print("Saving analoga array as 'analoga_list.p'")
-cloudpickle.dump( analoga, open( "analoga_list_" + time_start + "_" + \
-                                    time_end + ".p", "wb" ) )
+print("Saving analoga array as analoga_list_" + time_start[5:10] + "_" + \
+                                    time_end[5:10] + ".p")
+cloudpickle.dump( analoga, open( "analoga_list_" + time_start[5:10] + "_" + \
+                                    time_end[5:10] + ".p", "wb" ) )
