@@ -50,6 +50,11 @@ no_years = len(data_ano.groupby('time.year'))
 analoga = np.zeros((len(data_ano.time), no_analoga+1), dtype='datetime64[s]')
 analoga[:,0] = data_ano.time
 
+list_pc = []
+list_eof_r = []
+list_eof_q = []
+list_eof_msl = []
+
 #%%
 # Run time of script is observed with t_start and t_end respectively.
 t_start = time.time()
@@ -80,7 +85,7 @@ for i, day in enumerate(timeseries):
     ds_iris_r = ds.r.to_iris()
     ds_iris_q = ds.q.to_iris()
     ds_iris_msl = ds.msl.to_iris()
-    
+
     # Merge iris cubes to list of iris cubes.
     cube_list = iris.cube.CubeList([ds_iris_r, ds_iris_q, ds_iris_msl])
     ds_iris = cube_list.merge() 
@@ -96,11 +101,21 @@ for i, day in enumerate(timeseries):
         n += 1
         eof_var = solver.varianceFraction(neigs=n)
     
-    pc = solver.pcs(npcs=n, pcscaling=1)
+    pc = solver.pcs(npcs=n)
+    eof = solver.eofs(neofs=n)
     
-    # Transform iris cube of pcs to DataArray (xarray)
+    # Transform iris cube of pcs and eofs to DataArray (xarray)
     da_pc = xr.DataArray.from_iris(pc).rename('pc')
-    
+    da_eof_r = xr.DataArray.from_iris(eof[0]).rename('eof_r')
+    da_eof_q = xr.DataArray.from_iris(eof[1]).rename('eof_q')
+    da_eof_msl = xr.DataArray.from_iris(eof[2]).rename('eof_msl')
+   
+    # Append pc and eof arrays to lists to be stored as pickle files at the end.
+    list_pc.append(da_pc)
+    list_eof_r.append(da_eof_r)
+    list_eof_q.append(da_eof_q)
+    list_eof_msl.append(da_eof_msl)
+   
     # Convert DataArrays of current doy to iris cubes.
     # ppc calculation is vectorized and therefore carried out simultaneously
     # for each doy.
@@ -125,6 +140,9 @@ for i, day in enumerate(timeseries):
         # Delete current year y from norm array.
         norm = norm.sel(time = ~norm.time.dt.year.isin(da_pseudo_pc.time.to_series()[y].year))
         str_curr_day = da_pseudo_pc.time.to_series().dt.strftime('%Y-%m-%d')[y]
+        
+        # row... select row of current day in analoga array.
+        row = np.where(analoga[:,0] == datetime.datetime.strptime(str_curr_day, '%Y-%m-%d'))[0][0]
 
         #print('Looking for analoga for: ', str_curr_day)
         for a in range(1,no_analoga+1):
@@ -135,21 +153,41 @@ for i, day in enumerate(timeseries):
             analogon = ds_tmp.time.to_series()[minimum_idx]
             
             # Add analogon to analogon array
-            # row... select row of current day in analoga array.
-            row = np.where(analoga[:] == datetime.datetime.strptime(str_curr_day, '%Y-%m-%d'))[0][-1]
             analoga[row][a] = analogon
             
             # Set minimum value to nan in norm array to find 2nd, 3rd, ... minimum.
             norm = norm.where(norm.values != norm[minimum_idx].values)
     
             #print(str(a) +  '.analogon: ', str(analogon)[:10])
+            
+        #print('row ' + str(row) + ':' + str(analoga[row]))
 
     t_end_tmp = time.time()
     print("total time after " + str(day)[5:10] + ": ", str(datetime.timedelta(seconds=t_end_tmp - t_start)), '\n')
     
 # Save analogon list as pickle file.
 print('Analoga : \n', analoga)
-print("Saving analoga array as analoga_list_" + time_start[5:10] + "_" + \
+print("Saving analoga array to " + path + " analoga_list_" + time_start[5:10] + "_" + \
                                     time_end[5:10] + ".p")
-cloudpickle.dump( analoga, open( "analoga_list_" + time_start[5:10] + "_" + \
+cloudpickle.dump( analoga, open( path + "/analoga_list_" + time_start[5:10] + "_" + \
+                                    time_end[5:10] + ".p", "wb" ) )
+
+print("Saving pc list to " + path + " pc_list_" + time_start[5:10] + "_" + \
+                                    time_end[5:10] + ".p")
+cloudpickle.dump( list_pc, open( path + "/pc_list_" + time_start[5:10] + "_" + \
+                                    time_end[5:10] + ".p", "wb" ) )
+
+print("Saving eof r array to " + path + " eof_r_list_" + time_start[5:10] + "_" + \
+                                    time_end[5:10] + ".p")
+cloudpickle.dump( list_eof_r, open( path + "/eof_r_list_" + time_start[5:10] + "_" + \
+                                    time_end[5:10] + ".p", "wb" ) )
+
+print("Saving eof q array to " + path + " eof_q_list_" + time_start[5:10] + "_" + \
+                                    time_end[5:10] + ".p")
+cloudpickle.dump( list_eof_q, open( path + "/eof_q_list_" + time_start[5:10] + "_" + \
+                                    time_end[5:10] + ".p", "wb" ) )
+
+print("Saving eof msl array to " + path + " eof_msl_list_" + time_start[5:10] + "_" + \
+                                    time_end[5:10] + ".p")
+cloudpickle.dump( list_eof_msl, open( path + "/eof_msl_list_" + time_start[5:10] + "_" + \
                                     time_end[5:10] + ".p", "wb" ) )
